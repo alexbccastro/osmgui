@@ -427,8 +427,8 @@ def about_osmgui():
         "Baseado em Python + Tkinter + OSMnx"
     )
 
-def open_gitgub():
-    webbrowser.open("https://seudominio.com/osmgui-docs")  # coloque aqui o link da documentação
+def open_github():
+    webbrowser.open("https://github.com/alexbccastro/osmgui")  # coloque aqui o link da documentação
 
 def open_documentation():
     webbrowser.open("https://seudominio.com/osmgui-docs")  # coloque aqui o link da documentação
@@ -438,7 +438,7 @@ menu_bar = tk.Menu(root)
 # Menu "Arquivo"
 menu = tk.Menu(menu_bar, tearoff=0)
 menu.add_command(label="About OSM.gui", command=about_osmgui)
-menu.add_command(label="OSM.gui on GitHub", command=open_documentation)
+menu.add_command(label="OSM.gui on GitHub", command=open_github)
 menu.add_command(label="Documentation", command=open_documentation)
 menu.add_separator()
 menu.add_command(label="Exit", command=root.quit)
