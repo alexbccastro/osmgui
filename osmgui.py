@@ -197,7 +197,7 @@ def download_data():
         if highway_checkbutton_var.get():
             def dl_highway():
                 try:
-                    graph = ox.graph_from_place(place_name, network_type=highway_type_dict[road_type], simplify=simpl)
+                    graph = ox.graph_from_place(place_name, network_type=highway_type_dict[road_type], simplify=highway_simpl_checkbutton_var.get(), retain_all=retain_all_var.get(), truncate_by_edge=truncate_var.get())
                     ox.save_graph_geopackage(graph, filepath=f"{path}/highway_{safe_place}_{road_type}.gpkg")
                     return True
                 except Exception as e:
@@ -221,7 +221,7 @@ def download_data():
         if highway_checkbutton_var.get():
             def dl_highway():
                 try:
-                    graph = ox.graph_from_point(coord, dist=radius, network_type=highway_type_dict[road_type], simplify=simpl)
+                    graph = ox.graph_from_point(coord, dist=radius, network_type=highway_type_dict[road_type], simplify=highway_simpl_checkbutton_var.get(), retain_all=retain_all_var.get(), truncate_by_edge=truncate_var.get())
                     ox.save_graph_geopackage(graph, filepath=f"{path}/highway_{coord_str}_{road_type}_r{radius}m.gpkg")
                     return True
                 except Exception as e:
@@ -300,57 +300,68 @@ def road_select():
         highway_type_txt.config(foreground='#000000')
         highway_type_combobox.config(state='readonly')
         highway_simpl_checkbutton.config(state='normal')
+        retain_all_chk.config(state='normal')
+        truncate_chk.config(state='normal')
     else:
         highway_type_txt.config(foreground='#808080')
         highway_type_combobox.set('')
         highway_type_combobox.config(state='disabled')
-        highway_simpl_checkbutton_var.set(False)   # CORRIGIDO
+        highway_simpl_checkbutton_var.set(False)
         highway_simpl_checkbutton.config(state='disabled')
+        retain_all_var.set(False)
+        retain_all_chk.config(state='disabled')
+        truncate_var.set(False)
+        truncate_chk.config(state='disabled')
 
 
 # ---------------- Funções de seleção automática ----------------
 
 def select_all():
     if all_checkbutton_var.get():
-        # marcar todas as features
         for key in layers.keys():
             globals()[f"{key}_checkbutton_var"].set(True)
 
-        # highway também
+        # highway
         highway_checkbutton_var.set(True)
         highway_type_txt.config(foreground='#000000')
         highway_type_combobox.config(state='readonly')
         highway_simpl_checkbutton.config(state='normal')
+
+        # novos checkbuttons ficam disponíveis mas desmarcados
+        retain_all_chk.config(state='normal')
+        retain_all_var.set(False)
+        truncate_chk.config(state='normal')
+        truncate_var.set(False)
+
+
     else:
-        # desmarcar todas as features
         for key in layers.keys():
             globals()[f"{key}_checkbutton_var"].set(False)
 
-        # highway também
+        # highway
         highway_checkbutton_var.set(False)
         highway_type_txt.config(foreground='#808080')
         highway_type_combobox.set('')
         highway_type_combobox.config(state='disabled')
-        highway_simpl_checkbutton_var.set(False)   # CORRIGIDO
+        highway_simpl_checkbutton_var.set(False)
         highway_simpl_checkbutton.config(state='disabled')
 
-def clear_all():
-    # referência geográfica
-    name_checkbutton_var.set(False)
-    name_entry.delete(0, tk.END)
-    name_entry.config(state='disabled')
-    point_checkbutton_var.set(False)
-    lat_txt.config(foreground='#808080')
-    lat_entry.delete(0, tk.END)
-    lat_entry.config(state='disabled')
-    long_txt.config(foreground='#808080')
-    long_entry.delete(0, tk.END)
-    long_entry.config(state='disabled')
-    radius_txt.config(foreground='#808080')
-    radius_entry_var.set('')
-    radius_entry.config(state='disabled')
+        # novos checkbuttons voltam a desmarcados e desabilitados
+        retain_all_var.set(False)
+        retain_all_chk.config(state='disabled')
+        truncate_var.set(False)
+        truncate_chk.config(state='disabled')
 
-    # checkbuttons das features
+
+def select_all_from_menu():
+    all_checkbutton_var.set(True)   # força o checkbox a ficar ligado
+    select_all()
+
+
+def clear_all():
+    # referência geográfica (igual ao seu código) ...
+
+    # features
     all_checkbutton_var.set(False)
     for key in layers.keys():
         globals()[f"{key}_checkbutton_var"].set(False)
@@ -360,14 +371,13 @@ def clear_all():
     highway_type_txt.config(foreground='#808080')
     highway_type_combobox.set('')
     highway_type_combobox.config(state='disabled')
-    highway_simpl_checkbutton_var.set(False)   # CORRIGIDO
+    highway_simpl_checkbutton_var.set(False)
     highway_simpl_checkbutton.config(state='disabled')
+    retain_all_var.set(False)
+    retain_all_chk.config(state='disabled')
+    truncate_var.set(False)
+    truncate_chk.config(state='disabled')
 
-    # exportação
-    saveas_entry.delete(0, tk.END)
-    status_txt.config(text='Status: Waiting')
-    progress_bar_var.set(0)
-    root.update_idletasks()
 
 def saveas_dir():
     path = filedialog.askdirectory()
@@ -414,17 +424,18 @@ root = tk.Tk()
 root.title('OSM.gui, v1.0.0')
 root.iconbitmap('osmgui_logo_square.ico')
 root.resizable(width=False, height=False)
-root.configure(background='#d9d9d9')
 
 # ---------------- Menu Superior ----------------
 def about_osmgui():
     messagebox.showinfo(
         "About OSM.gui",
         "OSM.gui v1.0.0\n\n"
-        "Desenvolvido por:\n"
-        "- Nome do Desenvolvedor 1\n"
-        "- Nome do Desenvolvedor 2\n\n"
-        "Baseado em Python + Tkinter + OSMnx"
+        "Developed by:\n"
+        "- Alexandre Augusto Bezerra da Cunha Castro\n"
+        "- Matheus Batista Simões\n"
+        "- Paulo Vítor Nascimento de Freitas\n\n"
+        "October | 2025\n\n"
+        "Based in Python + Tkinter + OSMnx"
     )
 
 def open_github():
@@ -435,14 +446,26 @@ def open_documentation():
 
 menu_bar = tk.Menu(root)
 
-# Menu "Arquivo"
-menu = tk.Menu(menu_bar, tearoff=0)
-menu.add_command(label="About OSM.gui", command=about_osmgui)
-menu.add_command(label="OSM.gui on GitHub", command=open_github)
-menu.add_command(label="Documentation", command=open_documentation)
-menu.add_separator()
-menu.add_command(label="Exit", command=root.quit)
-menu_bar.add_cascade(label="Menu", menu=menu)
+
+# --- Arquivo ---
+file_menu = tk.Menu(menu_bar, tearoff=0)
+file_menu.add_command(label="Save as...", command=saveas_dir)
+file_menu.add_separator()
+file_menu.add_command(label="Exit", command=root.quit)
+menu_bar.add_cascade(label="File", menu=file_menu)
+
+# --- Ferramentas ---
+tools_menu = tk.Menu(menu_bar, tearoff=0)
+tools_menu.add_command(label="Clear All", command=clear_all)
+tools_menu.add_command(label="Select All", command=select_all_from_menu)
+menu_bar.add_cascade(label="Tools", menu=tools_menu)
+
+# --- Ajuda ---
+help_menu = tk.Menu(menu_bar, tearoff=0)
+help_menu.add_command(label="About OSM.gui", command=about_osmgui)
+help_menu.add_command(label="OSM.gui on GitHub", command=open_github)
+help_menu.add_command(label="Documentation", command=open_documentation)
+menu_bar.add_cascade(label="Help", menu=help_menu)
 
 # aplicar menu na janela
 root.config(menu=menu_bar)
@@ -462,6 +485,7 @@ ref_labelframe.columnconfigure(3, weight=1)
 ref_labelframe.columnconfigure(4, weight=1)
 ref_labelframe.columnconfigure(5, weight=1)
 ref_labelframe.columnconfigure(6, weight=1)
+ref_labelframe.rowconfigure(0, weight=1)
 ref_labelframe.rowconfigure(1, weight=1)
 ref_labelframe.rowconfigure(2, weight=1)
 
@@ -508,100 +532,99 @@ features_labelframe.columnconfigure(6, weight=1)
 
 all_checkbutton_var = tk.BooleanVar()
 all_checkbutton = ttk.Checkbutton(features_labelframe, text='Select All', variable=all_checkbutton_var, command=select_all, width=15)
-all_checkbutton.grid(row=0, column=0, padx=(5,0), pady=(0,5))
+all_checkbutton.grid(row=0, column=0, padx=(10,0), pady=(0,5), sticky='w')
 
 aerialway_checkbutton_var = tk.BooleanVar()
 aerialway_checkbutton = ttk.Checkbutton(features_labelframe, text='Aerialway', variable=aerialway_checkbutton_var, width=15)
-aerialway_checkbutton.grid(row=1, column=0, padx=(5,0), pady=(0,5))
+aerialway_checkbutton.grid(row=1, column=0, padx=(10,0), pady=(0,5), sticky='w')
 aeroway_checkbutton_var = tk.BooleanVar()
 aeroway_checkbutton = ttk.Checkbutton(features_labelframe, text='Aeroway', variable=aeroway_checkbutton_var, width=15)
-aeroway_checkbutton.grid(row=1, column=1, pady=(0,5))
+aeroway_checkbutton.grid(row=1, column=1, pady=(0,5), sticky='w')
 amenity_checkbutton_var = tk.BooleanVar()
 amenity_checkbutton = ttk.Checkbutton(features_labelframe, text='Amenity', variable=amenity_checkbutton_var, width=15)
-amenity_checkbutton.grid(row=1, column=2, pady=(0,5))
+amenity_checkbutton.grid(row=1, column=2, pady=(0,5), sticky='w')
 barrier_checkbutton_var = tk.BooleanVar()
 barrier_checkbutton = ttk.Checkbutton(features_labelframe, text='Barrier', variable=barrier_checkbutton_var, width=15)
-barrier_checkbutton.grid(row=1, column=3, pady=(0,5))
+barrier_checkbutton.grid(row=1, column=3, pady=(0,5), sticky='w')
 boundary_checkbutton_var = tk.BooleanVar()
 boundary_checkbutton = ttk.Checkbutton(features_labelframe, text='Boundary', variable=boundary_checkbutton_var, width=15)
-boundary_checkbutton.grid(row=1, column=4, pady=(0,5))
-
+boundary_checkbutton.grid(row=1, column=4, pady=(0,5), sticky='w')
 building_checkbutton_var = tk.BooleanVar()
 building_checkbutton = ttk.Checkbutton(features_labelframe, text='Building', variable=building_checkbutton_var, width=15)
-building_checkbutton.grid(row=2, column=0, padx=(5,0), pady=(0,5))
+building_checkbutton.grid(row=1, column=5, pady=(0,5), sticky='w')
+
 craft_checkbutton_var = tk.BooleanVar()
 craft_checkbutton = ttk.Checkbutton(features_labelframe, text='Craft', variable=craft_checkbutton_var, width=15)
-craft_checkbutton.grid(row=2, column=1, pady=(0,5))
+craft_checkbutton.grid(row=2, column=0, padx=(10,0), pady=(0,5), sticky='w')
 cycleway_checkbutton_var = tk.BooleanVar()
 cycleway_checkbutton = ttk.Checkbutton(features_labelframe, text='Cycleway', variable=cycleway_checkbutton_var, width=15)
-cycleway_checkbutton.grid(row=2, column=2, pady=(0,5))
+cycleway_checkbutton.grid(row=2, column=1, pady=(0,5), sticky='w')
 emergency_checkbutton_var = tk.BooleanVar()
 emergency_checkbutton = ttk.Checkbutton(features_labelframe, text='Emergency', variable=emergency_checkbutton_var, width=15)
-emergency_checkbutton.grid(row=2, column=3, pady=(0,5))
+emergency_checkbutton.grid(row=2, column=2, pady=(0,5), sticky='w')
 geological_checkbutton_var = tk.BooleanVar()
 geological_checkbutton = ttk.Checkbutton(features_labelframe, text='Geological', variable=geological_checkbutton_var, width=15)
-geological_checkbutton.grid(row=2, column=4, pady=(0,5))
-
+geological_checkbutton.grid(row=2, column=3, pady=(0,5), sticky='w')
 healthcare_checkbutton_var = tk.BooleanVar()
 healthcare_checkbutton = ttk.Checkbutton(features_labelframe, text='Healthcare', variable=healthcare_checkbutton_var, width=15)
-healthcare_checkbutton.grid(row=3, column=0, padx=(5,0), pady=(0,5))
+healthcare_checkbutton.grid(row=2, column=4, pady=(0,5), sticky='w')
 highway_checkbutton_var = tk.BooleanVar()
 highway_checkbutton = ttk.Checkbutton(features_labelframe, text='Highway', variable=highway_checkbutton_var, command=road_select, width=15)
-highway_checkbutton.grid(row=3, column=1, pady=(0,5))
+highway_checkbutton.grid(row=2, column=5, pady=(0,5), sticky='w')
+
 historic_checkbutton_var = tk.BooleanVar()
 historic_checkbutton = ttk.Checkbutton(features_labelframe, text='Historic', variable=historic_checkbutton_var, width=15)
-historic_checkbutton.grid(row=3, column=2, pady=(0,5))
+historic_checkbutton.grid(row=3, column=0, padx=(10,0), pady=(0,5), sticky='w')
 landuse_checkbutton_var = tk.BooleanVar()
 landuse_checkbutton = ttk.Checkbutton(features_labelframe, text='Landuse', variable=landuse_checkbutton_var, width=15)
-landuse_checkbutton.grid(row=3, column=3, pady=(0,5))
+landuse_checkbutton.grid(row=3, column=1, pady=(0,5), sticky='w')
 leisure_checkbutton_var = tk.BooleanVar()
 leisure_checkbutton = ttk.Checkbutton(features_labelframe, text='Leisure', variable=leisure_checkbutton_var, width=15)
-leisure_checkbutton.grid(row=3, column=4, pady=(0,5))
-
+leisure_checkbutton.grid(row=3, column=2, pady=(0,5), sticky='w')
 manmade_checkbutton_var = tk.BooleanVar()
 manmade_checkbutton = ttk.Checkbutton(features_labelframe, text='Man Made', variable=manmade_checkbutton_var, width=15)
-manmade_checkbutton.grid(row=4, column=0, padx=(5,0), pady=(0,5))
+manmade_checkbutton.grid(row=3, column=3, pady=(0,5), sticky='w')
 military_checkbutton_var = tk.BooleanVar()
 military_checkbutton = ttk.Checkbutton(features_labelframe, text='Military', variable=military_checkbutton_var, width=15)
-military_checkbutton.grid(row=4, column=1, pady=(0,5))
+military_checkbutton.grid(row=3, column=4, pady=(0,5), sticky='w')
 natural_checkbutton_var = tk.BooleanVar()
 natural_checkbutton = ttk.Checkbutton(features_labelframe, text='Natural', variable=natural_checkbutton_var, width=15)
-natural_checkbutton.grid(row=4, column=2, pady=(0,5))
+natural_checkbutton.grid(row=3, column=5, pady=(0,5), sticky='w')
+
 office_checkbutton_var = tk.BooleanVar()
 office_checkbutton = ttk.Checkbutton(features_labelframe, text='Office', variable=office_checkbutton_var, width=15)
-office_checkbutton.grid(row=4, column=3, pady=(0,5))
+office_checkbutton.grid(row=4, column=0, padx=(10,0), pady=(0,5), sticky='w')
 park_checkbutton_var = tk.BooleanVar()
 park_checkbutton = ttk.Checkbutton(features_labelframe, text='Park', variable=park_checkbutton_var, width=15)
-park_checkbutton.grid(row=4, column=4, pady=(0,5))
-
+park_checkbutton.grid(row=4, column=1, pady=(0,5), sticky='w')
 place_checkbutton_var = tk.BooleanVar()
 place_checkbutton = ttk.Checkbutton(features_labelframe, text='Place', variable=place_checkbutton_var, width=15)
-place_checkbutton.grid(row=5, column=0, padx=(5,0), pady=(0,5))
+place_checkbutton.grid(row=4, column=2, pady=(0,5), sticky='w')
 power_checkbutton_var = tk.BooleanVar()
 power_checkbutton = ttk.Checkbutton(features_labelframe, text='Power', variable=power_checkbutton_var, width=15)
-power_checkbutton.grid(row=5, column=1, pady=(0,5))
+power_checkbutton.grid(row=4, column=3, pady=(0,5), sticky='w')
 publictransport_checkbutton_var = tk.BooleanVar()
 publictransport_checkbutton = ttk.Checkbutton(features_labelframe, text='Public Transport', variable=publictransport_checkbutton_var, width=15)
-publictransport_checkbutton.grid(row=5, column=2, pady=(0,5))
+publictransport_checkbutton.grid(row=4, column=4, pady=(0,5), sticky='w')
 railway_checkbutton_var = tk.BooleanVar()
 railway_checkbutton = ttk.Checkbutton(features_labelframe, text='Railway', variable=railway_checkbutton_var, width=15)
-railway_checkbutton.grid(row=5, column=3, pady=(0,5))
+railway_checkbutton.grid(row=4, column=5, pady=(0,5), sticky='w')
+
 shop_checkbutton_var = tk.BooleanVar()
 shop_checkbutton = ttk.Checkbutton(features_labelframe, text='Shop', variable=shop_checkbutton_var, width=15)
-shop_checkbutton.grid(row=5, column=4, pady=(0,5))
-
+shop_checkbutton.grid(row=5, column=0, padx=(10,0), pady=(0,5), sticky='w')
 telecom_checkbutton_var = tk.BooleanVar()
 telecom_checkbutton = ttk.Checkbutton(features_labelframe, text='Telecom', variable=telecom_checkbutton_var, width=15)
-telecom_checkbutton.grid(row=6, column=0, padx=(5,0), pady=(0,5))
+telecom_checkbutton.grid(row=5, column=1, pady=(0,5), sticky='w')
 tourism_checkbutton_var = tk.BooleanVar()
 tourism_checkbutton = ttk.Checkbutton(features_labelframe, text='Tourism', variable=tourism_checkbutton_var, width=15)
-tourism_checkbutton.grid(row=6, column=1, pady=(0,5))
+tourism_checkbutton.grid(row=5, column=2, pady=(0,5), sticky='w')
 water_checkbutton_var = tk.BooleanVar()
 water_checkbutton = ttk.Checkbutton(features_labelframe, text='Water', variable=water_checkbutton_var, width=15)
-water_checkbutton.grid(row=6, column=2, pady=(0,5))
+water_checkbutton.grid(row=5, column=3, pady=(0,5), sticky='w')
 waterway_checkbutton_var = tk.BooleanVar()
 waterway_checkbutton = ttk.Checkbutton(features_labelframe, text='Waterway', variable=water_checkbutton_var, width=15)
-waterway_checkbutton.grid(row=6, column=3, pady=(0,5))
+waterway_checkbutton.grid(row=5, column=4, pady=(0,5), sticky='w')
 
 checkbutton_vars = [aerialway_checkbutton_var.get(), aeroway_checkbutton_var.get(), amenity_checkbutton_var.get(),
                     barrier_checkbutton_var.get(), boundary_checkbutton_var.get(), building_checkbutton_var.get(),
@@ -621,22 +644,29 @@ road_data_labelframe.rowconfigure(1, weight=1)
 road_data_labelframe.rowconfigure(2, weight=1)
 road_data_labelframe.rowconfigure(3, weight=1)
 road_data_labelframe.rowconfigure(4, weight=1)
-road_data_labelframe.rowconfigure(5, weight=1)
-road_data_labelframe.rowconfigure(6, weight=1)
 road_data_labelframe.columnconfigure(0, weight=1)
 road_data_labelframe.columnconfigure(1, weight=1)
 
-highway_type_txt = ttk.Label(road_data_labelframe, text='Highway Type', foreground='#808080', anchor='w', width=10)
-highway_type_txt.grid(row=0, column=0, padx=10, sticky='ew')
+highway_type_txt = ttk.Label(road_data_labelframe, text='Highway Type', foreground='#808080', anchor='w')
+highway_type_txt.grid(row=0, column=0, padx=10, pady=(0,5), sticky='w')
 ToolTip(highway_type_txt, 'Select the highway type you want to download')
 highway_type_dict = {'Walk': 'walk', 'Bike': 'bike', 'Drive': 'drive', 'All Public': 'all_public', 'All': 'all'}
 highway_type_combobox_var = tk.StringVar()
 highway_type_combobox = ttk.Combobox(road_data_labelframe, textvariable=highway_type_combobox_var, values=list(highway_type_dict.keys()), state='disabled', width=15)
-highway_type_combobox.grid(row=0, column=1, padx=(0,5), pady=5, sticky='ew')
+highway_type_combobox.grid(row=0, column=1, padx=(0,5), pady=(0,5), sticky='e')
 highway_simpl_checkbutton_var = tk.BooleanVar()
 highway_simpl_checkbutton = ttk.Checkbutton(road_data_labelframe, text='Simplify Lines', variable=highway_simpl_checkbutton_var, state='disabled')
 highway_simpl_checkbutton.grid(row=1, column=0, columnspan=2, padx=10, pady=(0,5), sticky='ew')
-ToolTip(highway_simpl_checkbutton, 'This option simplifies the road network by removing intermediate nodes from the roads.')
+ToolTip(highway_simpl_checkbutton, 'Simplify the road network by removing intermediate nodes from the roads.')
+retain_all_var = tk.BooleanVar(value=False)
+retain_all_chk = ttk.Checkbutton(road_data_labelframe, text="Retain All Components", variable=retain_all_var, state="disabled")
+retain_all_chk.grid(row=2, column=0, columnspan=2, padx=10, pady=(0,5), sticky='w')
+ToolTip(retain_all_chk, 'Keeps all components of the graph (does not discard disconnected subgraphs).')
+truncate_var = tk.BooleanVar(value=False)
+truncate_chk = ttk.Checkbutton(road_data_labelframe, text="Truncate by Edge", variable=truncate_var, state="disabled")
+truncate_chk.grid(row=3, column=0, columnspan=2, padx=10, pady=(0,5), sticky='w')
+ToolTip(truncate_chk, 'Expands until the edges cross the boundary of the area, rather than cutting off at the exact boundary.')
+
 
 # labelframe e widgets para exportação
 export_labelframe = ttk.Labelframe(root, text='Export')
@@ -650,7 +680,7 @@ export_labelframe.columnconfigure(5, weight=1)
 export_labelframe.columnconfigure(6, weight=1)
 
 style = ttk.Style()
-style.configure('TButton', anchor='w', justify='left')
+style.configure('TButton', anchor='center', justify='left')
 
 saveas_button = ttk.Button(export_labelframe, style='TButton', text='Save As', width=15, command=saveas_dir)
 saveas_button.grid(row=3, column=0, columnspan=1, padx=(10,0), pady=5, sticky='w')
@@ -674,7 +704,6 @@ progress_frame.columnconfigure(6, weight=2)
 
 # progress bar styles
 style = ttk.Style()
-style.theme_use("default")
 style.configure("Blue.Horizontal.TProgressbar", troughcolor="white", background="#1E90FF")
 style.configure("Green.Horizontal.TProgressbar", troughcolor="white", background="#32CD32")
 style.configure("Red.Horizontal.TProgressbar", troughcolor="white", background="#DC143C")
@@ -687,9 +716,6 @@ progress_bar.grid(row=4, column=0, columnspan=7, sticky="ew")
 # status label
 status_txt = ttk.Label(progress_frame, text="Status: Waiting", width=35, justify="left", anchor="w")
 status_txt.grid(row=5, column=0, columnspan=7, pady=(5,0), sticky='w')
-
-credit_txt=ttk.Label(progress_frame, text='2025. Autores')
-credit_txt.grid(row=6, column=0, pady=(15,0), sticky='w')
 
 # loop
 root.mainloop()

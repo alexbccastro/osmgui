@@ -1,0 +1,3 @@
+cx_Freeze~=8.4.0
+osmnx~=2.0.5
+pillow~=11.3.0
