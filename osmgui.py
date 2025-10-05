@@ -449,7 +449,7 @@ menu_bar = tk.Menu(root)
 
 # --- Arquivo ---
 file_menu = tk.Menu(menu_bar, tearoff=0)
-file_menu.add_command(label="Save as...", command=saveas_dir)
+file_menu.add_command(label="Save As...", command=saveas_dir)
 file_menu.add_separator()
 file_menu.add_command(label="Exit", command=root.quit)
 menu_bar.add_cascade(label="File", menu=file_menu)
