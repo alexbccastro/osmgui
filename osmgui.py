@@ -423,15 +423,21 @@ menu_bar = tk.Menu(root)
 
 # --- Arquivo ---
 file_menu = tk.Menu(menu_bar, tearoff=0)
-file_menu.add_command(label="Save As...", command=saveas_dir)
+file_menu.add_command(label=f"{'Save As...'.ljust(20)}Ctrl+S", command=saveas_dir)
+root.bind("<Control-s>", lambda event: saveas_dir())  # Ctrl+A → Select All
 file_menu.add_separator()
 file_menu.add_command(label="Exit", command=root.quit)
 menu_bar.add_cascade(label="File", menu=file_menu)
 
 # --- Ferramentas ---
 tools_menu = tk.Menu(menu_bar, tearoff=0)
-tools_menu.add_command(label="Clear All", command=clear_all)
-tools_menu.add_command(label="Select All", command=select_all_from_menu)
+tools_menu.add_command(label=f"{'Select All'.ljust(20)}Ctrl+A", command=select_all_from_menu)
+root.bind("<Control-a>", lambda event: select_all_from_menu())  # Ctrl+A → Select All
+tools_menu.add_command(label=f"{'Clear All'.ljust(20)}Ctrl+E", command=clear_all)
+root.bind("<Control-e>", lambda event: clear_all())              # Ctrl+D → Clear All
+tools_menu.add_command(label=f"{'Download Data'.ljust(20)}Ctrl+D", command=clear_all)
+root.bind("<Control-d>", lambda event: clear_all())              # Ctrl+D → Clear All
+
 menu_bar.add_cascade(label="Tools", menu=tools_menu)
 
 # --- Ajuda ---
@@ -661,9 +667,9 @@ saveas_button.grid(row=3, column=0, columnspan=1, padx=(10,0), pady=5, sticky='w
 saveas_entry_var = tk.StringVar()
 saveas_entry = ttk.Entry(export_labelframe, textvariable=saveas_entry_var)
 saveas_entry.grid(row=3, column=1, columnspan=3, pady=5, sticky='ew')
-download_button = ttk.Button(export_labelframe, text='Download', width=10, command=download_data)
+download_button = ttk.Button(export_labelframe, text='Download Data', width=10, command=download_data)
 download_button.grid(row=3, column=5, padx=(0,10), pady=5, sticky='ew')
-clean_button = ttk.Button(export_labelframe, text='Clear', width=10, command=clear_all)
+clean_button = ttk.Button(export_labelframe, text='Clear All', width=10, command=clear_all)
 clean_button.grid(row=3, column=6, padx=(5,10), pady=5, sticky='ew')
 
 progress_frame = ttk.Frame(export_labelframe, borderwidth=10)
