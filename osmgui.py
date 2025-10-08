@@ -84,22 +84,9 @@ layers = {
     "boundary": {"tags": {"boundary": True}, "filename": "boundary"},
     "building": {"tags": {"building": True}, "filename": "building"},
     "craft": {"tags": {"craft": True}, "filename": "craft"},
-    "cycleway": {
-        "tags": {
-            "highway": "cycleway",
-            "cycleway:right": True,
-            "cycleway:left": True,
-            "cycleway:both": True,
-            "cycleway:buffer": True,
-            "cycleway:foot": True,
-            "cycleway:lane": True,
-            "cyclestreet": True,
-            "cycleway:segregated": True,
-            "cycleway:surface": True,
-            "cycle highway": True
-        },
-        "filename": "cycleway"
-    },
+    "cycleway": {"tags": {"highway": "cycleway", "cycleway:right": True, "cycleway:left": True, "cycleway:both": True,
+    "cycleway:buffer": True, "cycleway:foot": True, "cycleway:lane": True, "cyclestreet": True, "cycleway:segregated": True,
+    "cycleway:surface": True, "cycle highway": True}, "filename": "cycleway"},
     "emergency": {"tags": {"emergency": True}, "filename": "emergency"},
     "geological": {"tags": {"geological": True}, "filename": "geological"},
     "healthcare": {"tags": {"healthcare": True}, "filename": "healthcare"},
@@ -110,13 +97,7 @@ layers = {
     "military": {"tags": {"military": True}, "filename": "military"},
     "natural": {"tags": {"natural": True}, "filename": "natural"},
     "office": {"tags": {"office": True}, "filename": "office"},
-    "park": {
-        "tags": {
-            "leisure": ["dog_park", "park"],
-            "tourism": ["zoo"]
-        },
-        "filename": "park"
-    },
+    "park": {"tags": {"leisure": ["dog_park", "park"], "tourism": ["zoo"]}, "filename": "park"},
     "place": {"tags": {"place": True}, "filename": "place"},
     "power": {"tags": {"power": True}, "filename": "power"},
     "publictransport": {"tags": {"public_transport": True}, "filename": "public_transport"},
@@ -124,15 +105,8 @@ layers = {
     "shop": {"tags": {"shop": True}, "filename": "shop"},
     "telecom": {"tags": {"telecom": True}, "filename": "telecom"},
     "tourism": {"tags": {"tourism": True}, "filename": "tourism"},
-    "water": {
-        "tags": {
-            "water": True,
-            "natural": "water"
-        },
-        "filename": "water"
-    },
-    "waterway": {"tags": {"waterway": True}, "filename": "waterway"},
-}
+    "water": {"tags": {"water": True,"natural": "water"},"filename": "water"},
+    "waterway": {"tags": {"waterway": True}, "filename": "waterway"},}
 
 
 # ---------------- Função principal de download ----------------
@@ -177,7 +151,7 @@ def download_data():
         if not success:
             error_occurred = True
 
-        status_txt.config(text=f"Status: {task_name} ({percent:.0f}%)")
+        status_txt.config(text=f"Status: {task_name} data downloaded. ({percent:.0f}% concluded)")
         root.update_idletasks()
 
     # ---------------- animate during task ----------------
@@ -623,7 +597,7 @@ water_checkbutton_var = tk.BooleanVar()
 water_checkbutton = ttk.Checkbutton(features_labelframe, text='Water', variable=water_checkbutton_var, width=15)
 water_checkbutton.grid(row=5, column=3, pady=(0,5), sticky='w')
 waterway_checkbutton_var = tk.BooleanVar()
-waterway_checkbutton = ttk.Checkbutton(features_labelframe, text='Waterway', variable=water_checkbutton_var, width=15)
+waterway_checkbutton = ttk.Checkbutton(features_labelframe, text='Waterway', variable=waterway_checkbutton_var, width=15)
 waterway_checkbutton.grid(row=5, column=4, pady=(0,5), sticky='w')
 
 checkbutton_vars = [aerialway_checkbutton_var.get(), aeroway_checkbutton_var.get(), amenity_checkbutton_var.get(),
@@ -714,8 +688,8 @@ progress_bar = ttk.Progressbar(progress_frame, variable=progress_bar_var, style=
 progress_bar.grid(row=4, column=0, columnspan=7, sticky="ew")
 
 # status label
-status_txt = ttk.Label(progress_frame, text="Status: Waiting", width=35, justify="left", anchor="w")
-status_txt.grid(row=5, column=0, columnspan=7, pady=(5,0), sticky='w')
+status_txt = ttk.Label(progress_frame, text="Status: Waiting", width=100, justify="left", anchor="w")
+status_txt.grid(row=5, column=0, columnspan=7, pady=(5,0), sticky='ew')
 
 # loop
 root.mainloop()

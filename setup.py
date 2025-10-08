@@ -2,16 +2,13 @@ from cx_Freeze import setup, Executable
 import sys
 import os
 
-# Script principal
-main_script = "osmgui.py"  # renomeie se o arquivo tiver outro nome real
+main_script = "osmgui.py"
 
-# Ícones e imagens necessários
 include_files = [
     "osmgui_logo_square.ico",
     "osmgui_logo_txt_75.png"
 ]
 
-# Dependências adicionais detectadas no código
 build_exe_options = {
     "packages": [
         "tkinter",
@@ -25,6 +22,7 @@ build_exe_options = {
         "networkx",
         "shapely",
         "matplotlib",
+        "html",  # <-- incluímos explicitamente
     ],
     "includes": [
         "tkinter.ttk",
@@ -32,18 +30,17 @@ build_exe_options = {
         "tkinter.messagebox",
         "PIL.Image",
         "PIL.ImageTk",
+        "html.parser",  # <-- reforço opcional
     ],
     "include_files": include_files,
-    "excludes": ["unittest", "email", "html", "http", "pydoc"],
+    "excludes": ["unittest", "pydoc"],  # <-- removidos "html" e "http"
     "optimize": 2,
 }
 
-# Base para Windows (sem console)
 base = None
 if sys.platform == "win32":
     base = "Win32GUI"
 
-# Configuração do executável
 setup(
     name="OSM.gui",
     version="1.0.0",
