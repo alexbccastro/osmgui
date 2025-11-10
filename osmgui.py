@@ -6,9 +6,13 @@ import re
 import json
 import os
 import webbrowser
+import threading
+import time
 
 ox.settings.log_console = True
 ox.settings.max_query_area_size = 25e12
+ox.settings.timeout = 600  # aumenta para 10 minutos
+ox.settings.overpass_endpoint = "https://overpass.kumi.systems/api/interpreter"  # opcional, mais rápido
 
 
 # ---------------- Funções auxiliares ----------------
@@ -22,56 +26,97 @@ def format_coords(coord):
     lat, lon = coord
     return f"{lat:.5f}_{lon:.5f}"
 
-def download_feature_from_place(place_name, tags, filepath):
-    try:
-        gdf = ox.features_from_place(place_name, tags=tags)
+def download_feature_from_place(place_name, tags, filepath, retries=3, wait=10):
+    """
+    Faz download de feições OSM a partir de um nome de local.
+    Tenta novamente automaticamente em caso de erro de conexão ou timeout.
+    """
+    for attempt in range(1, retries + 1):
+        try:
+            gdf = ox.features_from_place(place_name, tags=tags)
 
-        if gdf is None or gdf.empty:
-            messagebox.showwarning("Warning", f"No data found for {os.path.basename(filepath)}.")
+            if gdf is None or gdf.empty:
+                messagebox.showwarning("Warning", f"No data found for {os.path.basename(filepath)}.")
+                return False
+
+            if "nodes" in gdf.columns:
+                gdf = gdf.drop(columns=["nodes"])
+
+            geom_col = gdf.geometry.name
+            for col in gdf.columns:
+                if col == geom_col:
+                    continue
+                if gdf[col].apply(lambda x: isinstance(x, (list, dict))).any():
+                    gdf[col] = gdf[col].apply(lambda x: json.dumps(x) if x is not None else None)
+
+            gdf.to_file(filepath, driver="GPKG")
+            return True
+
+        except Exception as e:
+            # trata timeouts e erros temporários com repetição automática
+            if "ReadTimeout" in str(e) or "ConnectionError" in str(e):
+                if attempt < retries:
+                    status_txt.config(text=f"⚠️ Timeout on '{os.path.basename(filepath)}', retrying ({attempt}/{retries})...")
+                    root.update_idletasks()
+                    time.sleep(wait)
+                    continue  # tenta novamente
+            messagebox.showerror("Error", f"Failed to download {filepath}: {e}")
             return False
 
-        if "nodes" in gdf.columns:
-            gdf = gdf.drop(columns=["nodes"])
+def download_feature_from_point(coord, radius, tags, filepath, retries=3, wait=10):
+    """
+    Faz download de feições OSM a partir de coordenadas e raio.
+    Inclui repetição automática em caso de timeout.
+    """
+    for attempt in range(1, retries + 1):
+        try:
+            gdf = ox.features_from_point(coord, dist=radius, tags=tags)
 
-        geom_col = gdf.geometry.name
-        for col in gdf.columns:
-            if col == geom_col:
-                continue
-            if gdf[col].apply(lambda x: isinstance(x, (list, dict))).any():
-                gdf[col] = gdf[col].apply(lambda x: json.dumps(x) if x is not None else None)
+            if gdf is None or gdf.empty:
+                messagebox.showwarning("Warning", f"No data found for {os.path.basename(filepath)}.")
+                return False
 
-        gdf.to_file(filepath, driver="GPKG")
-        return True
+            if "nodes" in gdf.columns:
+                gdf = gdf.drop(columns=["nodes"])
 
-    except Exception as e:
-        messagebox.showerror("Error", f"Failed to download {filepath}: {e}")
-        return False
+            geom_col = gdf.geometry.name
+            for col in gdf.columns:
+                if col == geom_col:
+                    continue
+                if gdf[col].apply(lambda x: isinstance(x, (list, dict))).any():
+                    gdf[col] = gdf[col].apply(lambda x: json.dumps(x) if x is not None else None)
 
-def download_feature_from_point(coord, radius, tags, filepath):
-    try:
-        gdf = ox.features_from_point(coord, dist=radius, tags=tags)
+            gdf.to_file(filepath, driver="GPKG")
+            return True
 
-        if gdf is None or gdf.empty:
-            messagebox.showwarning("Warning", f"No data found for {os.path.basename(filepath)}.")
+        except Exception as e:
+            if "ReadTimeout" in str(e) or "ConnectionError" in str(e):
+                if attempt < retries:
+                    status_txt.config(text=f"⚠️ Timeout on '{os.path.basename(filepath)}', retrying ({attempt}/{retries})...")
+                    root.update_idletasks()
+                    time.sleep(wait)
+                    continue
+            messagebox.showerror("Error", f"Failed to download {filepath}: {e}")
             return False
 
-        if "nodes" in gdf.columns:
-            gdf = gdf.drop(columns=["nodes"])
 
-        geom_col = gdf.geometry.name
-        for col in gdf.columns:
-            if col == geom_col:
-                continue
-            if gdf[col].apply(lambda x: isinstance(x, (list, dict))).any():
-                gdf[col] = gdf[col].apply(lambda x: json.dumps(x) if x is not None else None)
+# --- animação suave para a progress bar (não bloqueante) ---
+def smooth_progress(target, step=1, delay=10):
+    """
+    Anima a barra de progresso do valor atual até 'target' em pequenos passos.
+    Usa root.after para não bloquear a interface.
+    """
+    try:
+        current = progress_bar_var.get()
+    except NameError:
+        return
 
-        gdf.to_file(filepath, driver="GPKG")
-        return True
-
-    except Exception as e:
-        messagebox.showerror("Error", f"Failed to download {filepath}: {e}")
-        return False
-
+    if current < target:
+        next_val = min(current + step, target)
+        progress_bar_var.set(next_val)
+        root.after(delay, lambda: smooth_progress(target, step, delay))
+    else:
+        root.update_idletasks()
 
 
 # ---------------- Dicionário global de camadas ----------------
@@ -140,6 +185,7 @@ def download_data():
 
     completed = 0
     error_occurred = False
+    active_tasks = 0
 
     # ---------------- update progress ----------------
     def update_progress(task_name="", success=True):
@@ -156,15 +202,42 @@ def download_data():
 
     # ---------------- animate during task ----------------
     def animate_task(func, *args, task_name=""):
+        nonlocal active_tasks  # para controlar quantas tarefas ainda estão em execução
+        active_tasks += 1
+
         progress_bar.config(mode="indeterminate")
-        progress_bar.start(15)  # animation speed
+        progress_bar.start(10)
+        status_txt.config(text=f"⏳ {task_name} in progress...")
         root.update_idletasks()
 
-        success = func(*args)
+        def run_task():
+            success = func(*args)
+            # volta à thread principal para atualizar a GUI e o contador
+            root.after(0, lambda: finalize_task(success))
 
-        progress_bar.stop()
-        progress_bar.config(mode="determinate")
-        update_progress(task_name, success=success)
+        def finalize_task(success):
+            nonlocal active_tasks
+            progress_bar.stop()
+            progress_bar.config(mode="determinate")
+            update_progress(task_name, success=success)
+            active_tasks -= 1
+            if active_tasks == 0:
+                finish_download()
+
+        threading.Thread(target=run_task, daemon=True).start()
+
+    def finish_download():
+        smooth_progress(100, step=2, delay=10)
+        if error_occurred:
+            progress_bar.config(style="Red.Horizontal.TProgressbar")
+            status_txt.config(text="❗ Completed with errors (100%)")
+            messagebox.showwarning("Warning", "Download finished, but some layers failed.")
+        else:
+            progress_bar.config(style="Green.Horizontal.TProgressbar")
+            status_txt.config(text="✅ Download completed (100%)")
+            messagebox.showinfo("Info", "Download completed successfully.")
+        download_button.config(state="normal")
+        root.update_idletasks()
 
     # ---------------- download by place name ----------------
     if name_checkbutton_var.get():
@@ -213,16 +286,7 @@ def download_data():
     else:
         messagebox.showerror("Error", "Please select Name or Point as geographic reference.")
 
-    # ---------------- finalize ----------------
-    progress_bar_var.set(100)
-    if error_occurred:
-        progress_bar.config(style="Red.Horizontal.TProgressbar")
-        status_txt.config(text="Status: Completed with errors (100%)")
-        messagebox.showwarning("Warning", "Download finished, but some layers failed.")
-    else:
-        progress_bar.config(style="Green.Horizontal.TProgressbar")
-        status_txt.config(text="Status: Download completed (100%)")
-        messagebox.showinfo("Info", "Download completed successfully.")
+
 
     download_button.config(state="normal")
     root.update_idletasks()
@@ -340,6 +404,24 @@ def clear_all():
     for key in layers.keys():
         globals()[f"{key}_checkbutton_var"].set(False)
 
+    # Reset geographic reference
+    name_checkbutton_var.set(False)
+    name_entry.delete(0, tk.END)
+    name_entry.config(state='disabled')
+
+    point_checkbutton_var.set(False)
+    lat_entry.delete(0, tk.END)
+    lat_entry.config(state='disabled')
+    long_entry.delete(0, tk.END)
+    long_entry.config(state='disabled')
+    radius_entry.delete(0, tk.END)
+    radius_entry.config(state='disabled')
+
+    # Reset label colors for disabled state
+    lat_txt.config(foreground='#808080')
+    long_txt.config(foreground='#808080')
+    radius_txt.config(foreground='#808080')
+
     # rodovias
     highway_checkbutton_var.set(False)
     highway_type_txt.config(foreground='#808080')
@@ -352,6 +434,16 @@ def clear_all():
     truncate_var.set(False)
     truncate_chk.config(state='disabled')
 
+    # limpar campo do diretório de exportação
+    saveas_entry_var.set("")
+
+    try:
+        progress_bar_var.set(0)
+        progress_bar.config(style="Blue.Horizontal.TProgressbar", mode="determinate")
+        status_txt.config(text="Status: Waiting")
+        root.update_idletasks()
+    except NameError:
+        pass
 
 def saveas_dir():
     path = filedialog.askdirectory()
@@ -407,8 +499,8 @@ def about_osmgui():
         "Developed by:\n"
         "- Alexandre Augusto Bezerra da Cunha Castro\n"
         "- Matheus Batista Simões\n"
-        "- Paulo Vítor Nascimento de Freitas\n\n"
-        "October | 2025\n\n"
+        "- Thereza Rachel Rodrigues Monteiro\n\n"
+        "November | 2025\n\n"
         "Based in Python + Tkinter + OSMnx"
     )
 
