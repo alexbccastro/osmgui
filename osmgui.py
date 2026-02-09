@@ -497,11 +497,12 @@ def about_osmgui():
     messagebox.showinfo(
         "About OSM.gui",
         "OSM.gui v1.0.0\n\n"
-        "Developed by:\n"
+        "Developed by:\n\n"
         "- Alexandre Augusto Bezerra da Cunha Castro\n"
         "- Matheus Batista Simões\n"
-        "- Thereza Rachel Rodrigues Monteiro\n\n"
-        "November | 2025\n\n"
+        "- Thereza Rachel Rodrigues Monteiro\n"
+        "- Paulo Vitor Nascimento de Freitas\n\n"
+        "February | 2026\n\n"
         "Based in Python + Tkinter + OSMnx"
     )
 
