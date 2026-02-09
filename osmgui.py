@@ -425,7 +425,7 @@ def clear_all():
     # rodovias
     highway_checkbutton_var.set(False)
     highway_type_txt.config(foreground='#808080')
-    highway_type_combobox.set('')
+    highway_type_combobox.set('All')
     highway_type_combobox.config(state='disabled')
     highway_simpl_checkbutton_var.set(False)
     highway_simpl_checkbutton.config(state='disabled')
@@ -436,6 +436,7 @@ def clear_all():
 
     # limpar campo do diretório de exportação
     saveas_entry_var.set("")
+    download_button.config(state="disabled")
 
     try:
         progress_bar_var.set(0)
@@ -507,6 +508,13 @@ def about_osmgui():
 def open_github():
     webbrowser.open("https://github.com/alexbccastro/osmgui")  # coloque aqui o link da documentação
 
+def how_to_use():
+    messagebox.showinfo('How to Use OSM.gui', 'HOW TO USE OSM.GUI\n\n1.Select and select and fill in a geographical reference field (Name or Point Coordinates);'
+                                              '\n\n2.Select the OSM features you want to download\n\nIf you want to download all features, select the ‘Select All’ option\n\nIf you check road data (Highway Feature), configure "Highway Parameters";'
+                                              '\n\n3.Click on the "Save As" to select the folder where the data will be downloaded;'
+                                              '\n\n4.Click on "download Data" to download OSM data;'
+                                              '\n\n5.Click ‘Clear All’ to clear all fields.')
+
 def open_documentation():
     webbrowser.open("https://seudominio.com/osmgui-docs")  # coloque aqui o link da documentação
 
@@ -527,16 +535,14 @@ tools_menu.add_command(label=f"{'Select All'.ljust(20)}Ctrl+A", command=select_a
 root.bind("<Control-a>", lambda event: select_all_from_menu())  # Ctrl+A → Select All
 tools_menu.add_command(label=f"{'Clear All'.ljust(20)}Ctrl+E", command=clear_all)
 root.bind("<Control-e>", lambda event: clear_all())              # Ctrl+D → Clear All
-tools_menu.add_command(label=f"{'Download Data'.ljust(20)}Ctrl+D", command=clear_all)
-root.bind("<Control-d>", lambda event: clear_all())              # Ctrl+D → Clear All
-
 menu_bar.add_cascade(label="Tools", menu=tools_menu)
 
 # --- Ajuda ---
 help_menu = tk.Menu(menu_bar, tearoff=0)
 help_menu.add_command(label="About OSM.gui", command=about_osmgui)
+help_menu.add_command(label="How to Use OSM.gui", command=how_to_use)
 help_menu.add_command(label="OSM.gui on GitHub", command=open_github)
-help_menu.add_command(label="Documentation", command=open_documentation)
+help_menu.add_command(label="User Guide on ResearchGate", command=open_documentation)
 menu_bar.add_cascade(label="Help", menu=help_menu)
 
 # aplicar menu na janela
@@ -726,6 +732,7 @@ highway_type_dict = {'Walk': 'walk', 'Bike': 'bike', 'Drive': 'drive', 'All Publ
 highway_type_combobox_var = tk.StringVar()
 highway_type_combobox = ttk.Combobox(road_data_labelframe, textvariable=highway_type_combobox_var, values=list(highway_type_dict.keys()), state='disabled', width=15)
 highway_type_combobox.grid(row=0, column=1, padx=(0,5), pady=(0,5), sticky='e')
+highway_type_combobox_var.set("All")
 highway_simpl_checkbutton_var = tk.BooleanVar()
 highway_simpl_checkbutton = ttk.Checkbutton(road_data_labelframe, text='Simplify Lines', variable=highway_simpl_checkbutton_var, state='disabled')
 highway_simpl_checkbutton.grid(row=1, column=0, columnspan=2, padx=10, pady=(0,5), sticky='ew')
@@ -761,8 +768,17 @@ saveas_entry = ttk.Entry(export_labelframe, textvariable=saveas_entry_var)
 saveas_entry.grid(row=3, column=1, columnspan=3, pady=5, sticky='ew')
 download_button = ttk.Button(export_labelframe, text='Download Data', width=10, command=download_data)
 download_button.grid(row=3, column=5, padx=(0,10), pady=5, sticky='ew')
+download_button.config(state="disabled")
 clean_button = ttk.Button(export_labelframe, text='Clear All', width=10, command=clear_all)
 clean_button.grid(row=3, column=6, padx=(5,10), pady=5, sticky='ew')
+
+def check_download_button_state(*args):
+    path = saveas_entry_var.get()
+    if path and len(path.strip()) > 0:
+        download_button.config(state="normal")
+    else:
+        download_button.config(state="disabled")
+saveas_entry_var.trace_add("write", check_download_button_state)
 
 progress_frame = ttk.Frame(export_labelframe, borderwidth=10)
 progress_frame.grid(row=4, column=0, columnspan=7, sticky="ew")
